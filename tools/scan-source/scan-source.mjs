@@ -195,6 +195,25 @@ RULES.push({
   },
 });
 rx('config.middleware-external-fetch', 'config', 'medium', 'middleware/proxy fetches an external host', /fetch\s*\(\s*['"`]https?:\/\/(?!localhost)[^'"`]+/, { paths: /(^|\/)(middleware|proxy)\.(m?[jt]s)$/i });
+// --- Next.js / Vercel app specific
+RULES.push({
+  id: 'config.next-rewrite-external', category: 'config', severity: 'high',
+  description: 'next.config rewrite/redirect destination on an external host',
+  test: ({ path, text }) => {
+    if (!/(^|\/)next\.config\.(m?[jt]s|cjs)$/.test(path)) return [];
+    const out = [];
+    const re = /destination\s*:\s*['"`](https?:\/\/[^'"`]+)['"`]/g;
+    let m; while ((m = re.exec(text))) out.push({ line: 1, excerpt: `destination: ${m[1].slice(0, 120)}` });
+    if (/unsafe-eval/.test(text)) out.push({ line: 1, excerpt: 'CSP header allows unsafe-eval' });
+    if (/allowedOrigins\s*:\s*\[[^\]]*['"`]\*['"`]/.test(text)) out.push({ line: 1, excerpt: 'serverActions.allowedOrigins contains "*"' });
+    return out;
+  },
+});
+rx('config.instrumentation-external', 'config', 'high', 'instrumentation hook fetching an external host (runs on every cold start)', /fetch\s*\(\s*['"`]https?:\/\/(?!localhost|127\.0\.0\.1)[^'"`]+/, { paths: /(^|\/)(instrumentation|instrumentation-client)\.(m?[jt]s)$/i });
+rx('auth.credentials-to-external', 'exfil', 'high', 'auth/login/session code sends data to an external host', /fetch\s*\(\s*['"`]https?:\/\/(?!localhost|127\.0\.0\.1|api\.clerk\.|clerk\.|api\.stripe\.com|api\.openai\.com|api\.anthropic\.com)[^'"`]+['"`]\s*,\s*\{[^}]*(method\s*:\s*['"`]POST['"`]|body\s*:)/, { paths: /(login|logout|auth|session|sign-?in|credentials|password|token)/i });
+rx('auth.middleware-forwards-cookies', 'exfil', 'high', 'middleware forwards request cookies/authorization to an external host', /fetch\s*\(\s*['"`]https?:\/\/[^'"`]+['"`][^;]{0,400}(cookie|authorization)/i, { paths: /(^|\/)(middleware|proxy)\.(m?[jt]s)$/i });
+rx('config.vercelignore-hides-source', 'config', 'medium', '.vercelignore excludes directories that normally hold source or tests', /^(?!#)\s*(src|app|lib|pages|components|test|tests|scripts)\/?\s*$/m, { paths: /(^|\/)\.vercelignore$/ });
+rx('config.public-server-file', 'config', 'high', 'server-side file or secret material under public/ (served verbatim)', /^/, { paths: /(^|\/)public\/.*\.(env|pem|key|sql|sqlite|db|bak|zip|tar|gz|log|sh|php)$/i });
 rx('config.next-external-script', 'config', 'medium', '<Script>/<script> from an external origin', /<(Script|script)[^>]+src\s*=\s*["'{]\s*["']?https?:\/\/(?!(www\.)?(google(tagmanager)?\.com|googleapis\.com|gstatic\.com|vercel\.com|vercel-scripts\.com|vercel-insights\.com|clerk\.[a-z0-9.-]+|js\.stripe\.com|cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com|unpkg\.com|plausible\.io))/i, { paths: CODE });
 
 function classify(findings) {

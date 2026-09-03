@@ -4,7 +4,7 @@ import { createServer } from 'node:http';
 import { mkdtemp, readFile, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { parseArgs, safeRelativePath, resolveUnder, flattenTree, createClient, recover, verify, UsageError } from '../tools/vercel-recover/vercel-recover.mjs';
+import { parseArgs, safeRelativePath, resolveUnder, flattenTree, createClient, recover, recoverProject, selectDeployments, branchDirName, verify, UsageError } from '../tools/vercel-recover/vercel-recover.mjs';
 
 const TOKEN = 'test-token-123';
 const DEPLOYMENT = 'dpl_test123';
@@ -38,6 +38,21 @@ function fakeVercel({ flakyOnce = false } = {}) {
     const url = new URL(req.url, 'http://x');
     calls.push({ path: url.pathname, team: url.searchParams.get('teamId'), auth: req.headers.authorization });
     if (req.headers.authorization !== `Bearer ${TOKEN}`) { res.writeHead(403); res.end('{"error":{"code":"forbidden"}}'); return; }
+    if (url.pathname === '/v6/deployments') {
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify({ deployments: [
+        { uid: DEPLOYMENT, state: 'READY', target: 'production', created: 300, meta: { githubCommitRef: 'main' } },
+        { uid: 'dpl_branchOld', state: 'READY', target: null, created: 100, meta: { githubCommitRef: 'feat/x' } },
+        { uid: 'dpl_branchNew', state: 'READY', target: null, created: 200, meta: { githubCommitRef: 'feat/x' } },
+        { uid: 'dpl_errored', state: 'ERROR', target: null, created: 400, meta: { githubCommitRef: 'feat/broken' } },
+        { uid: 'dpl_cli', state: 'READY', target: null, created: 150, meta: {} },
+      ] }));
+      return;
+    }
+    if (/^\/v13\/deployments\/dpl_branch(New|Old)$/.test(url.pathname)) { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ id: url.pathname.split('/').pop(), url: 'b.vercel.app', meta: {} })); return; }
+    if (/^\/v6\/deployments\/dpl_branch(New|Old)\/files$/.test(url.pathname)) { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify([{ name: 'branch.txt', type: 'file', uid: 'u-a' }])); return; }
+    const mb = url.pathname.match(/^\/v8\/deployments\/dpl_branch(New|Old)\/files\/(.+)$/);
+    if (mb && contents[mb[2]]) { const c = contents[mb[2]]; res.setHeader('content-type', c.type); res.end(c.body); return; }
     if (url.pathname === `/v13/deployments/${DEPLOYMENT}`) { res.setHeader('content-type', 'application/json'); res.end(JSON.stringify({ id: DEPLOYMENT, url: 'x.vercel.app', name: 'x', target: 'production', meta: { githubCommitSha: 'abc' } })); return; }
     if (url.pathname === `/v6/deployments/${DEPLOYMENT}/files`) {
       if (flakyOnce && !flaked) { flaked = true; res.writeHead(429, { 'retry-after': '0' }); res.end('slow down'); return; }
@@ -126,4 +141,41 @@ test('dry run downloads nothing', async () => {
     assert.equal(written, 0);
     assert.ok(!calls.some((c) => c.path.includes('/v8/')));
   } finally { server.close(); }
+});
+
+test('selectDeployments picks production and the newest READY head per branch', () => {
+  const sel = selectDeployments({ deployments: [
+    { uid: 'p', state: 'READY', target: 'production', created: 3, meta: { githubCommitRef: 'main' } },
+    { uid: 'old', state: 'READY', created: 1, meta: { githubCommitRef: 'f' } },
+    { uid: 'new', state: 'READY', created: 2, meta: { githubCommitRef: 'f' } },
+    { uid: 'err', state: 'ERROR', created: 9, meta: { githubCommitRef: 'g' } },
+  ] });
+  assert.equal(sel.production.uid, 'p');
+  assert.deepEqual(sel.branches.map((b) => [b.branch, b.deployment.uid]).sort(), [['f', 'new'], ['main', 'p']]);
+});
+
+test('branchDirName cannot escape the output directory', () => {
+  assert.equal(branchDirName('feat/x'), 'feat__x');
+  assert.equal(branchDirName('../../etc'), 'etc');
+  assert.equal(branchDirName('..'), 'unnamed');
+  assert.ok(!branchDirName('a/../b').includes('..'));
+});
+
+test('project mode recovers production and each branch head', async () => {
+  const { server, api } = await fakeVercel();
+  try {
+    const out = await mkdtemp(join(tmpdir(), 'vr-'));
+    const { results } = await recoverProject({ project: 'prj_1', team: 'team_1', out, token: TOKEN, api, concurrency: 2, quiet: true });
+    assert.deepEqual(results.map((r) => [r.kind, r.deployment, r.errors]), [['production', DEPLOYMENT, 0], ['branch', 'dpl_branchNew', 0]]);
+    assert.equal(await readFile(join(out, 'branches', 'feat__x', 'branch.txt'), 'utf8'), 'hello');
+    await stat(join(out, 'production', 'package.json'));
+    const summary = JSON.parse(await readFile(join(out, 'recovery-summary.json'), 'utf8'));
+    assert.equal(summary.results.length, 2);
+    await stat(join(out, 'deployments.json'));
+  } finally { server.close(); }
+});
+
+test('parseArgs rejects --deployment together with --project', () => {
+  assert.throws(() => parseArgs(['--deployment', 'd', '--project', 'p']), UsageError);
+  assert.equal(parseArgs(['--project', 'p', '--limit', '5']).limit, 5);
 });

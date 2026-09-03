@@ -12,8 +12,16 @@
  * Usage:
  *   VERCEL_TOKEN=... node vercel-recover.mjs --deployment dpl_xxx --team team_xxx --out ./recovered
  *
+ * Whole-project mode (one run recovers every branch head Vercel still holds):
+ *   VERCEL_TOKEN=... node vercel-recover.mjs --project prj_xxx --team team_xxx --out ./recovered/clv
+ *   Writes <out>/production/ (the current production deployment) and
+ *   <out>/branches/<branch>/ (the newest READY deployment per git branch), plus
+ *   <out>/deployments.json (the full deployment listing that was used).
+ *
  * Options:
- *   --deployment <id|url>   Deployment id (dpl_...) or hostname. Required.
+ *   --deployment <id|url>   Deployment id (dpl_...) or hostname. Required unless --project.
+ *   --project <projectId>   Recover production + latest READY deployment per branch.
+ *   --limit <n>             Max deployments to list in --project mode (default 100).
  *   --team <teamId>         Team id (team_...) or slug. Optional for personal scope.
  *   --out <dir>             Output directory (created). Default: ./recovered/<deploymentId>
  *   --token <token>         Vercel access token. Prefer VERCEL_TOKEN env var.
@@ -41,7 +49,7 @@ const DEFAULT_API = 'https://api.vercel.com';
 const SKIP_DIRS_DEFAULT = new Set(['node_modules', '.git']);
 
 export function parseArgs(argv) {
-  const args = { concurrency: 6, api: DEFAULT_API, includeNodeModules: false, dryRun: false, quiet: false };
+  const args = { concurrency: 6, api: DEFAULT_API, includeNodeModules: false, dryRun: false, quiet: false, limit: 100 };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     const next = () => {
@@ -53,6 +61,8 @@ export function parseArgs(argv) {
     switch (a) {
       case '--deployment': args.deployment = next(); break;
       case '--team': args.team = next(); break;
+      case '--project': args.project = next(); break;
+      case '--limit': args.limit = Number(next()); break;
       case '--out': args.out = next(); break;
       case '--token': args.token = next(); break;
       case '--api': args.api = next(); break;
@@ -67,6 +77,8 @@ export function parseArgs(argv) {
   if (!Number.isInteger(args.concurrency) || args.concurrency < 1 || args.concurrency > 32) {
     throw new UsageError('--concurrency must be an integer between 1 and 32');
   }
+  if (!Number.isInteger(args.limit) || args.limit < 1 || args.limit > 1000) throw new UsageError('--limit must be an integer between 1 and 1000');
+  if (args.deployment && args.project) throw new UsageError('use either --deployment or --project, not both');
   return args;
 }
 
@@ -162,6 +174,7 @@ export function createClient({ api = DEFAULT_API, token, team, fetchImpl = fetch
   return {
     getDeployment: (id) => request(`/v13/deployments/${encodeURIComponent(id)}`),
     listFiles: (id) => request(`/v6/deployments/${encodeURIComponent(id)}/files`),
+    listDeployments: (projectId, limit = 100) => request(`/v6/deployments?projectId=${encodeURIComponent(projectId)}&limit=${limit}`),
     /** Returns a Buffer with the file bytes. Handles both raw and {data: base64} responses. */
     async getFile(id, uid) {
       const res = await request(`/v8/deployments/${encodeURIComponent(id)}/files/${encodeURIComponent(uid)}`, { raw: true });
@@ -246,6 +259,54 @@ export async function recover(opts) {
   return { manifest, outDir, written };
 }
 
+/** Pick the production deployment and the newest READY deployment per branch. */
+export function selectDeployments(list) {
+  const deployments = Array.isArray(list) ? list : (list?.deployments || []);
+  const ready = deployments.filter((d) => (d.state || d.readyState) === 'READY');
+  const production = ready.filter((d) => d.target === 'production').sort((a, b) => (b.created || b.createdAt || 0) - (a.created || a.createdAt || 0))[0] || null;
+  const byBranch = new Map();
+  for (const d of ready) {
+    const branch = d.meta?.githubCommitRef || d.meta?.gitCommitRef || d.meta?.gitlabCommitRef || d.meta?.bitbucketCommitRef || null;
+    if (!branch) continue;
+    const prev = byBranch.get(branch);
+    if (!prev || (d.created || d.createdAt || 0) > (prev.created || prev.createdAt || 0)) byBranch.set(branch, d);
+  }
+  return { production, branches: [...byBranch.entries()].map(([branch, d]) => ({ branch, deployment: d })) };
+}
+
+/** Turn a git branch name into a directory name that cannot escape <out>. */
+export function branchDirName(branch) {
+  const cleaned = branch.replace(/\.\.+/g, '_').replace(/[^A-Za-z0-9._-]+/g, '__').replace(/^[._]+/, '').slice(0, 120);
+  return cleaned || 'unnamed';
+}
+
+export async function recoverProject(opts) {
+  const { project, team, out, token, api, limit = 100, quiet, fetchImpl } = opts;
+  const log = quiet ? () => {} : (m) => process.stderr.write(`${m}\n`);
+  if (!project) throw new UsageError('--project is required');
+  const client = createClient({ api, token, team, fetchImpl, log });
+  const outDir = resolve(out || join('recovered', project));
+  await mkdir(outDir, { recursive: true });
+  const listing = await client.listDeployments(project, limit);
+  await writeFile(join(outDir, 'deployments.json'), JSON.stringify(listing, null, 2));
+  const { production, branches } = selectDeployments(listing);
+  log(`project ${project}: production=${production ? production.uid || production.id : 'none'}, ${branches.length} branch heads`);
+  const results = [];
+  if (production) {
+    const id = production.uid || production.id;
+    const r = await recover({ ...opts, deployment: id, out: join(outDir, 'production') });
+    results.push({ kind: 'production', deployment: id, written: r.written, errors: r.manifest.errors.length });
+  }
+  for (const { branch, deployment } of branches) {
+    const id = deployment.uid || deployment.id;
+    if (production && id === (production.uid || production.id)) continue;
+    const r = await recover({ ...opts, deployment: id, out: join(outDir, 'branches', branchDirName(branch)) });
+    results.push({ kind: 'branch', branch, deployment: id, written: r.written, errors: r.manifest.errors.length });
+  }
+  await writeFile(join(outDir, 'recovery-summary.json'), JSON.stringify({ project, recoveredAt: new Date().toISOString(), results }, null, 2));
+  return { outDir, results };
+}
+
 /** Verify an existing recovery against its manifest. Returns list of mismatches. */
 export async function verify(outDir) {
   const manifest = JSON.parse(await readFile(join(outDir, '.vercel-recovery', 'manifest.json'), 'utf8'));
@@ -278,8 +339,13 @@ if (isMain) {
   }
   const token = args.token || process.env.VERCEL_TOKEN;
   try {
-    const { manifest } = await recover({ ...args, token });
-    if (manifest.errors.length) process.exit(3);
+    if (args.project) {
+      const { results } = await recoverProject({ ...args, token });
+      if (results.some((r) => r.errors > 0)) process.exit(3);
+    } else {
+      const { manifest } = await recover({ ...args, token });
+      if (manifest.errors.length) process.exit(3);
+    }
   } catch (err) {
     if (err instanceof UsageError) { process.stderr.write(`${err.message}\n`); process.exit(1); }
     process.stderr.write(`${err.message}\n`);

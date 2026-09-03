@@ -36,6 +36,10 @@ npm run recover -- --deployment dpl_4BPrap2CmxSxup1JKuznTejN3yMw --team team_w9a
 node tools/scan-source/scan-source.mjs recovered/assetmodel-prod --md scan.md --fail-on none
 ```
 
+Or pull production plus every branch head in one run with `npm run recover -- --project <prj_id> --team team_w9arIt9t47jpM9nRkZSwxjGM --out recovered/all`.
+
+Note: the tool needs to reach `https://api.vercel.com`; a sandboxed agent session whose network policy blocks that host must run it elsewhere.
+
 Then follow `docs/RECOVERY-RUNBOOK.md` to land the tree on a branch, let CI /
 CodeQL / Copilot review it, re-link the Vercel project to this repository, rotate
 the environment variables (Databento, terminal session secret, IXPRT API token)
