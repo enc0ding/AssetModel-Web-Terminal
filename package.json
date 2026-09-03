@@ -1,0 +1,16 @@
+{
+  "name": "assetmodel-web-terminal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Recovery and hardening kit for the assetmodel-web Vercel project: source recovery from Vercel deployments, source security scanner, hardened CI, GitHub hardening script.",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "scan": "node tools/scan-source/scan-source.mjs . --ignore node_modules --ignore recovered/ --fail-on high",
+    "scan:report": "node tools/scan-source/scan-source.mjs . --ignore node_modules --ignore recovered/ --md scan-report.md --json scan-report.json --fail-on none",
+    "recover": "node tools/vercel-recover/vercel-recover.mjs",
+    "harden": "bash scripts/github-harden.sh"
+  },
+  "license": "UNLICENSED"
+}

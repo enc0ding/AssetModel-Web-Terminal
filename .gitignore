@@ -1,0 +1,10 @@
+node_modules/
+recovered/
+scan-report.md
+scan-report.json
+.env
+.env.*
+!.env.example
+.vercel/
+.DS_Store
+*.log

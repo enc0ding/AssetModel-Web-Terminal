@@ -1,0 +1,78 @@
+{
+  "capturedAt": "2026-09-03T04:30:00Z",
+  "capturedBy": "Claude Code session (Vercel MCP connector, read-only)",
+  "team": { "id": "team_w9arIt9t47jpM9nRkZSwxjGM", "slug": "psybourgs-projects", "plan": "pro" },
+  "note": "Source files are NOT retrievable through the MCP connector; use tools/vercel-recover with a Vercel access token (docs/RECOVERY-RUNBOOK.md) or restore the deleted GitHub repositories.",
+  "projects": {
+    "assetmodel-web": {
+      "projectId": "prj_nDUGu674YALesJiEohB0KTCqicy2",
+      "framework": "nextjs",
+      "nodeVersion": "24.x",
+      "domains": ["assetmodel.com", "assetmodel-web.vercel.app"],
+      "gitLink": { "type": "github", "org": "enc0ding", "repo": "AssetModel", "repoId": 1342838712, "status": "repository deleted on GitHub; a new empty repo with the same name (id 1351350255, created 2026-08-30) is not the linked one" },
+      "paused": true,
+      "production": {
+        "deploymentId": "dpl_4BPrap2CmxSxup1JKuznTejN3yMw",
+        "url": "assetmodel-jhfv2wdkk-psybourgs-projects.vercel.app",
+        "createdAt": 1787407941815,
+        "branch": "main",
+        "sha": "64d0299e68d6aeef796b417484a14281113544af",
+        "message": "Recover AssetModel production source from Vercel",
+        "buildLog": "pnpm 10.28, Next.js 16.2.10 (Turbopack), 25 routes incl. /api/terminal/* and /terminal, middleware; husky prepare; sharp + unrs-resolver build scripts ignored"
+      },
+      "previousProduction": [
+        { "deploymentId": "dpl_GnHJiNNf2eHek4p9ZBHJ9wXue1j8", "createdAt": 1786591440415, "branch": "agent/redesign/clearstreet", "sha": "b5e1f9dabefe4f20b4376713aaa163119844060e", "source": "cli", "message": "style(icon): dark mark on transparent for the favicon" },
+        { "deploymentId": "dpl_YUCV493PqabeNqnCGhQrrkbXSBXv", "createdAt": 1786590952845, "branch": "agent/redesign/clearstreet", "sha": "dddb17d893ccfa5054223faabaac92a09312c131", "source": "cli", "message": "feat(seo): full metadata, OG card, structured data, AI-crawler policy" },
+        { "deploymentId": "dpl_EPgXRi61aH4t79UogqGbSRFjB2Hs", "createdAt": 1784407187844, "branch": "agent/redesign/clearstreet", "sha": "879d67a182b2c345953f706be56a6e3a8b8616d0", "source": "cli", "message": "feat: AssetModel quant terminal — auth-gated /terminal dashboard on Databento" }
+      ],
+      "branchHeads": [
+        { "branch": "claude/assetmodel-audit-session-hardening", "pr": 6, "deploymentId": "dpl_DGPpdQg8KyvQwa3oQVc144uJP7UL", "sha": "9b92fa6e2ea80815c16a81e4fe9ed5b2c19ed790", "createdAt": 1787460782177, "message": "test(auth): pin the load-bearing token checks with mutation-verified cases" },
+        { "branch": "claude/assetmodel-p0-audit-dk1ynm", "pr": 5, "deploymentId": "dpl_3NXM4imCiiJqooAEEANDgXWwqC5N", "sha": "25e47af59a93dbdc8e97224f1a5ab6531d3ede86", "createdAt": 1787447311822, "message": "test(regime): cover the zero-call options-skew branch; narrow an overbroad report claim" },
+        { "branch": "claude/assetmodel-ixprt-api-jvtyjf", "pr": 1, "deploymentId": "dpl_7M8ozcGiHhVXYHPyYe6KbxUfFL3n", "sha": "0e69509c931bb881fb714f3b468aeafde773fafd", "createdAt": 1787436584898, "message": "chore: format the council audit remediation plan" },
+        { "branch": "main", "deploymentId": "dpl_DzwuyCjgdCTQr71jKx8SZcLgpCPG", "sha": "cbf19b6b77993d997a02f395a09d0752743b284e", "createdAt": 1787407882996, "state": "ERROR", "message": "Initialize repository for source recovery (build failed: no Next.js detected)" }
+      ],
+      "runtimeErrorsLast7d": ["/api/market-pulse: Databento 401 (22x) and DATABENTO_API_KEY not configured (5x) — key revoked or missing, not an attack signature"]
+    },
+    "clv-gg-app": {
+      "projectId": "prj_aQm1oeuCaaZHmrL2gX2EnLXWN9jb",
+      "framework": "nextjs",
+      "nodeVersion": "24.x",
+      "domains": ["app.clv.gg", "clv-gg-app.vercel.app"],
+      "gitLink": { "type": "github", "org": "enc0ding", "repo": "CLV.gg", "repoId": 1220593230, "status": "repository deleted on GitHub" },
+      "paused": false,
+      "production": {
+        "deploymentId": "dpl_6EXeE7P9R2XX3So7ssrRmPcBcDSJ",
+        "url": "clv-gg-hc5vnawcq-psybourgs-projects.vercel.app",
+        "createdAt": 1786741997220,
+        "branch": "main",
+        "sha": "ae0c3da287d6291fde83703c9dbe04faf299ca93",
+        "message": "fix(web): add problem-gambling helpline to the site-wide footer",
+        "buildLog": "turbo monorepo (10 workspace packages), apps/app is @clv-gg/app, pnpm 9.12.0, Next.js 15.5.18, .vercelignore drops .tmp/ audit scratch files; build runs the betsync + source-guard test suites before next build"
+      },
+      "previousProduction": [
+        { "deploymentId": "dpl_6EKN1qbd4jcYgbGzhe5JSTzCABj8", "createdAt": 1785724916616, "branch": "agent/feat/ss-board-v1", "sha": "00e62a719d2e138e6be7249e228f8e1b3d536e77", "source": "cli", "message": "fix(sharpsports-mobile): cross-platform typecheck skip echo" }
+      ],
+      "branchHeads": [
+        { "branch": "codex/fey-ui-overhaul", "deploymentId": "dpl_3Zf8KnsnkJDnCcyfZZWRygYMCdwJ", "sha": "bf3e0bed0982af1ff454b2bec90d6af5cb2377ed", "createdAt": 1787471715471, "author": "Codex <codex@openai.com>", "message": "feat(app): add point-in-time market workstation", "note": "9 deployments 2026-08-23 from this branch; two earlier ones errored; last successful is this head" },
+        { "branch": "agent/fix/ci-book-health-pending-promise", "pr": 184, "deploymentId": "dpl_EnwQXHTNACVcrZiHAHjDy4KZ98vx", "sha": "ef0badb4f05e703b4a1bd66730240644db063003", "createdAt": 1786814964691, "message": "fix(ci): guard team-logos route, align book-scope + warm-cache markers with prod source" },
+        { "branch": "main (cli)", "deploymentId": "dpl_2y48eRPqaQS8EUmS9xycniyQxmY6", "sha": "af4e1a1a6c02d3195cd9b644c2b26c4232c9df48", "createdAt": 1786818733512, "source": "cli", "message": "merge: land the apps/app design-foundation overhaul (P1+P2, curated graphs, /trends)" },
+        { "branch": "agent/chore/clv-only-separation", "deploymentId": "dpl_ACiyzaav2WVQZmBjQA5sTHdied9W", "sha": "9a46203b6dd9201d0c1a3f7ee1fb1bdde7fb8db7", "createdAt": 1786810945702, "message": "chore(clv-only): land the 2026-08-14 separation WIP (159 modified, 107 new files)" },
+        { "branch": "standalone-main", "deploymentId": "dpl_FxE8KoiAYS2zfk728v3VgHRk9ogL", "sha": "71d0cf580eab0f49bc90b05c34c744c0acb8c1a9", "createdAt": 1786648139294, "message": "fix(db): run hand-authored migrations durably" },
+        { "branch": "agent/fix/op-ws-connection-lifecycle", "deploymentId": "dpl_5o89m72tSyqziAAVaCiLRQz2A3fd", "sha": "cee4cea52125c34c226d99f3b3df126ff0136fe3", "createdAt": 1786591210993, "state": "BLOCKED", "author": "Reid Spachman <reid@clv.gg>" },
+        { "branch": "agent/fix/ss-board-canary-jsonb", "deploymentId": "dpl_9cCXUooVXXDCbVRz4Rt8L3uw5DfZ", "sha": "ec1ab1146837b3c98baa08dcebfac46243a44f21", "createdAt": 1785736479677 },
+        { "branch": "dependabot/npm_and_yarn/next-15.5.21", "pr": 183, "deploymentId": "dpl_AaZHTeRdyWzhVgPgTdDjVf4ei1i5", "sha": "9b88542ec0ec743c43d9b4369643e9da56939b5a", "createdAt": 1785714622959 }
+      ],
+      "runtimeErrorsLast7d": ["Postgres host db-pgsql-nyc3-03972-do-user-37680663-0.g.db.ondigitalocean.com: getaddrinfo ENOTFOUND since 2026-08-18 (140+ requests); affects /api/public/historical-proof, /api/public/sample-edges, /api/sharpsports/webhook, /api/billing/founding-counter, / (RSC user lookup) — the production database is gone or renamed"]
+    },
+    "ixprt-site": {
+      "projectId": "prj_UA278L5R58OiLD9eG0RCNh5VDG5I",
+      "framework": null,
+      "domains": ["ixprt.com", "www.ixprt.com", "ixprt-site.vercel.app"],
+      "gitLink": { "type": "github", "org": "enc0ding", "repo": "ixprt-site", "repoId": 1210538462, "status": "intact" },
+      "paused": false,
+      "pausedBefore": true,
+      "unpausedAt": "2026-09-03T04:34:00Z",
+      "production": { "deploymentId": "dpl_6Wn4SPtf8aB8VPSZz9qRKwxjqeEY", "createdAt": 1786643481474, "branch": "main", "sha": "9b650204c19de153a3cddbea638495437ca596b9", "message": "Merge remote-tracking branch 'origin/main'", "auditedClean": true }
+    }
+  }
+}

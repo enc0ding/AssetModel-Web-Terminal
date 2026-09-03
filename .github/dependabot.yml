@@ -1,0 +1,25 @@
+# Keep actions and npm dependencies patched; group minor/patch bumps so the
+# review burden stays low. Security updates are always opened individually.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    labels: [dependencies, ci]
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    labels: [dependencies]
+    versioning-strategy: increase-if-necessary
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]

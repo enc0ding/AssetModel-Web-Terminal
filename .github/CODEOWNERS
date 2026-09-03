@@ -1,0 +1,11 @@
+# Every change needs the owner's review. Rulesets enforce "require review from
+# code owners" so nothing can merge without @enc0ding seeing it, including
+# changes made by Copilot, Claude, or any other agent operating under a token.
+*                       @enc0ding
+/.github/               @enc0ding
+/scripts/               @enc0ding
+/tools/                 @enc0ding
+/vercel.json            @enc0ding
+/package.json           @enc0ding
+/package-lock.json      @enc0ding
+/pnpm-lock.yaml         @enc0ding
